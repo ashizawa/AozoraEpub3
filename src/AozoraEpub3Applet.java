@@ -46,6 +46,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -3078,8 +3080,21 @@ public class AozoraEpub3Applet extends JApplet
 			if (kindlegen != null) {
 				long time = System.currentTimeMillis();
 				String outFileName = outFile.getAbsolutePath();
+                String tmpFileName = outFile.getAbsolutePath();
+                String kindleName = new String("kindlegen");
+                if (kindlegen.getName().equals(kindleName)) {
+                    Pattern pattern = Pattern.compile("\\[(.*?)\\.epub$");
+                    Matcher matcher = pattern.matcher(outFileName);
+                    tmpFileName = matcher.replaceFirst("convert.epub");
+                    File outFile2 = new File(outFileName);
+                    File tmpFile2 = new File(tmpFileName);
+                    if (outFile2.renameTo(tmpFile2)) {
+                        tmpFileName = tmpFile2.getAbsolutePath();
+                    }
+                }
 				LogAppender.println("kindlegenを実行します : "+kindlegen.getName()+" \""+outFileName+"\"");
-				ProcessBuilder pb = new ProcessBuilder(kindlegen.getAbsolutePath(), "-locale", "en","-verbose", outFileName);
+                ProcessBuilder pb = new ProcessBuilder(kindlegen.getAbsolutePath(), "-locale", "en","-verbose", tmpFileName);
+				//ProcessBuilder pb = new ProcessBuilder(kindlegen.getAbsolutePath(), "-locale", "en","-verbose", outFileName);
 				this.kindleProcess = pb.start();
 				BufferedReader br = new BufferedReader(new InputStreamReader(this.kindleProcess.getInputStream()));
 				String line;
@@ -3098,6 +3113,24 @@ public class AozoraEpub3Applet extends JApplet
 					}
 				}
 				br.close();
+                if (kindlegen.getName().equals(kindleName)) {
+                    File outFile2 = new File(outFileName);
+                    File tmpFile2 = new File(tmpFileName);
+                    if (tmpFile2.renameTo(outFile2)) {
+                        LogAppender.println("\n"+"リネーム : "+ tmpFile2 + " => " + outFile2);
+                    }
+                    Pattern pattern = Pattern.compile("\\.epub$");
+                    Matcher matcher = pattern.matcher(tmpFileName);
+                    String tmpMobiFileName = matcher.replaceFirst(".mobi");
+                    pattern = Pattern.compile("\\.epub$");
+                    matcher = pattern.matcher(outFileName);
+                    String outMobiFileName = matcher.replaceFirst(".mobi");
+                    File outMobiFile = new File(outMobiFileName);
+                    File tmpMobiFile = new File(tmpMobiFileName);
+                    if (tmpMobiFile.renameTo(outMobiFile)) {
+                        LogAppender.println("リネーム : "+ tmpMobiFile + " => " + outMobiFile);
+                    }
+                }
 				if (convertCanceled) {
 					LogAppender.println("\n"+msg+"\nkindlegenの変換を中断しました");
 				} else {
@@ -3542,9 +3575,9 @@ public class AozoraEpub3Applet extends JApplet
 		setPropsSelected(jCheckCommentPrint, props, "CommentPrint");
 		setPropsSelected(jCheckCommentConvert, props, "CommentConvert");
 		//空行除去
-		try { jComboxRemoveEmptyLine.setSelectedItem(Integer.parseInt(props.getProperty("RemoveEmptyLine"))); } catch (Exception e) {}
+		try { jComboxRemoveEmptyLine.setSelectedItem(Integer.parseInt(props.getProperty("RemoveEmptyLine"))); }catch (Exception e) {}
 		propValue = props.getProperty("MaxEmptyLine");
-		try { jComboxMaxEmptyLine.setSelectedIndex(Integer.parseInt(propValue)); } catch (Exception e) {}
+		jComboxMaxEmptyLine.setSelectedItem(propValue==null?"0":propValue);
 		//行頭字下げ追加
 		setPropsSelected(jCheckForceIndent, props, "ForceIndent");
 		//強制改ページ
